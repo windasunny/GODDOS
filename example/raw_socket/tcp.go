@@ -2,7 +2,9 @@ package main
 
 /*
 #cgo CFLAGS: -I../../raw_socket
+#cgo LDFLAGS: -L. -ltcp
 #include "tcp.h"
+#include <stdlib.h>
 */
 import "C"
 import (
@@ -11,18 +13,20 @@ import (
 )
 
 func main() {
+    sourceIP := C.CString("10.211.55.2")
+    destIP := C.CString("10.211.55.17")
+    destPort := C.int(80)
+    data := C.CString("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-	srcIP := C.CString("10.211.55.2")
-	dstIP := C.CString("10.211.55.17")
-	port := C.int(80)
+    defer C.free(unsafe.Pointer(sourceIP))
+    defer C.free(unsafe.Pointer(destIP))
+    defer C.free(unsafe.Pointer(data))
 
-	data_string := C.CString("ABCDEFGHI")
-	defer C.free(unsafe.Pointer(data_string))
-
-	C.send_raw_packet(srcIP, dstIP, port, data_string)
-
-	C.free(unsafe.Pointer(srcIP))
-	C.free(unsafe.Pointer(dstIP))
-
-	fmt.Println("TCP Packet Sent!")
+    fmt.Println("Sending TCP packet...")
+    result := C.send_tcp_packet(sourceIP, destIP, destPort, data)
+    if result == 0 {
+        fmt.Println("Packet sent successfully!")
+    } else {
+        fmt.Println("Failed to send packet.")
+    }
 }
