@@ -1,34 +1,39 @@
-#include "tcp.h"
+#include "header.h"
 
 // Ip header
 void create_ip_header(struct iphdr *iph, const char *source_ip, const char *dest_ip, unsigned short packet_id, const char *data) {
     iph->ihl = 5;
     iph->version = 4;
     iph->tos = 0;
-    iph->tot_len = sizeof(struct iphdr) + sizeof(struct tcphdr) + strlen(data);
-    iph->id = htonl(packet_id);
+    iph->tot_len = sizeof (struct ip) + sizeof (struct tcphdr);
+    iph->id = htons(packet_id);  //Id of this packet
     iph->frag_off = 0;
     iph->ttl = 255;
     iph->protocol = IPPROTO_TCP;
-    iph->check = 0;
-    iph->saddr = inet_addr(source_ip);
+    iph->check = 0;      //Set to 0 before calculating checksum
+    iph->saddr = inet_addr ( source_ip );    //Spoof the source ip address
     iph->daddr = inet_addr(dest_ip);
 }
 
 // Tcp header
 void create_tcp_header(struct tcphdr *tcph, unsigned short source_port, unsigned short dest_port) {
-    tcph->source = htons(source_port);
-    tcph->dest = htons(dest_port);
+    tcph->source = htons (source_port);
+    tcph->dest = htons (dest_port);
     tcph->seq = 0;
     tcph->ack_seq = 0;
-    tcph->doff = 5;  // TCP header size
-    tcph->syn = 1;   // SYN flag
-    tcph->window = htons(5840);  // maximum allowed window size
-    tcph->check = 0;  // Leave checksum 0 now, filled later by pseudo header
+    tcph->doff = 5;      /* first and only tcp segment */
+    tcph->fin=0;
+    tcph->syn=1;
+    tcph->rst=0;
+    tcph->psh=0;
+    tcph->ack=0;
+    tcph->urg=0;
+    tcph->window = htons (5840); /* maximum allowed window size */
+    tcph->check = 0; /* if you set a checksum to zero, your kernel's IP stack
+                      should fill in the correct checksum during transmission */
     tcph->urg_ptr = 0;
 }
 
-// pseudo header
 void create_pseudo_header(struct pseudo_header *psh, const char *source_ip, const char *dest_ip, unsigned short tcp_length) {
     psh->source_address = inet_addr(source_ip);
     psh->dest_address = inet_addr(dest_ip);
@@ -37,24 +42,20 @@ void create_pseudo_header(struct pseudo_header *psh, const char *source_ip, cons
     psh->tcp_length = htons(tcp_length);
 }
 
-// pseudo tcp data
-void create_pseudogram(char *pseudogram, struct pseudo_header *psh, struct tcphdr *tcph, const char *data) {
-    memcpy(pseudogram, (char *)psh, sizeof(struct pseudo_header));
-    memcpy(pseudogram + sizeof(struct pseudo_header), tcph, sizeof(struct tcphdr) + strlen(data));
-}
-
-int send_tcp_packet(const char *source_ip, const char *dest_ip, int dest_port, const char *data) {
-    int s = socket(PF_INET, SOCK_RAW, IPPROTO_TCP);
+int send_tcp_packet(const char *source_ip, const char *dest_ip, int dest_port, const char *data)
+{
+    //Create a raw socket
+    int s = socket (PF_INET, SOCK_RAW, IPPROTO_TCP);
     if (s == -1) {
         perror("Failed to create socket");
         return -1;
     }
-
+    //Datagram to represent the packet
     char datagram[4096];
-    memset(datagram, 0, 4096);
-
+    //IP header
     struct iphdr *iph = (struct iphdr *)datagram;
-    struct tcphdr *tcph = (struct tcphdr *)(datagram + sizeof(struct iphdr));
+    //TCP header
+    struct tcphdr *tcph = (struct tcphdr *) (datagram + sizeof (struct ip));
     struct sockaddr_in sin;
     struct pseudo_header psh;
 
@@ -65,35 +66,31 @@ int send_tcp_packet(const char *source_ip, const char *dest_ip, int dest_port, c
     sin.sin_port = htons(dest_port);
     sin.sin_addr.s_addr = inet_addr(dest_ip);
 
-    strcpy(datagram + sizeof(struct iphdr) + sizeof(struct tcphdr), data);
+    memset (datagram, 0, 4096); /* zero out the buffer */
 
-    // Fill in IP Header
+    //Fill in the IP Header
     create_ip_header(iph, source_ip, dest_ip, packet_id, data);
     iph->check = csum((unsigned short *)datagram, iph->tot_len);
 
-    // Fill in TCP Header
+    //TCP Header
     create_tcp_header(tcph, source_port, dest_port);
 
-    // Pseudo Header
+    //Now the IP checksum
     create_pseudo_header(&psh, source_ip, dest_ip, sizeof(struct tcphdr) + strlen(data));
 
-    // Create Pseudogram
-    int psize = sizeof(struct pseudo_header) + sizeof(struct tcphdr) + strlen(data);
-    char *pseudogram = malloc(psize);
-    memcpy(pseudogram, (char *)&psh, sizeof(struct pseudo_header));
-    memcpy(pseudogram + sizeof(struct pseudo_header), tcph, sizeof(struct tcphdr) + strlen(data));
+    memcpy(&psh.tcp , tcph , sizeof (struct tcphdr));
 
-    tcph->check = csum((unsigned short *)pseudogram, psize);
-    free(pseudogram);
+    tcph->check = csum( (unsigned short*) &psh , sizeof (struct pseudo_header));
 
-    // Set IP_HDRINCL
+    //IP_HDRINCL to tell the kernel that headers are included in the packet
     int one = 1;
-    if (setsockopt(s, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one)) < 0) {
-        perror("Error setting IP_HDRINCL");
-        return -1;
+    const int *val = &one;
+    if (setsockopt (s, IPPROTO_IP, IP_HDRINCL, val, sizeof (one)) < 0)
+    {
+        printf ("Error setting IP_HDRINCL. Error number : %d . Error message : %s \n" , errno , strerror(errno));
+        exit(0);
     }
 
-    // Send Packet
     if (sendto(s, datagram, iph->tot_len, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0) {
         perror("sendto failed");
         return -1;

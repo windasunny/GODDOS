@@ -18,6 +18,8 @@ struct pseudo_header {
     u_int8_t placeholder;
     u_int8_t protocol;
     u_int16_t tcp_length;
+
+    struct tcphdr tcp;
 };
 
 /* Checksum calculation */
