@@ -59,7 +59,7 @@ void create_icmp_packet(char *buffer) {
 }
 
 // Send icmp packet
-void send_icmp_packet(const char *dest_ip) {
+int send_icmp_packet(const char *dest_ip) {
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
 
@@ -84,24 +84,13 @@ void send_icmp_packet(const char *dest_ip) {
     }
 
     // Send
-    ssize_t sent_bytes = sendto(sock, buffer, sizeof(struct icmp_header), 0,
-                                (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-    if (sent_bytes < 0) {
-        perror("Send failed");
-    } else {
-        printf("ICMP packet sent to %s\n", dest_ip);
+    if (sendto(sock, buffer, sizeof(struct icmp_header), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0) {
+        perror("sendto failed");
+        return -1;
     }
 
     // close socket
     close(sock);
-}
 
-int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <destination_ip>\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
-
-    send_icmp_packet(argv[1]);
     return 0;
 }
