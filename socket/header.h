@@ -15,8 +15,8 @@
 struct pseudo_header {
     u_int32_t source_address;
     u_int32_t dest_address;
-    u_int8_t placeholder;
-    u_int8_t protocol;
+    unsigned char placeholder;
+    unsigned char protocol;
     u_int16_t tcp_length;
 
     struct tcphdr tcp;

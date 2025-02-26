@@ -4,19 +4,17 @@
 
 /* Generic checksum calculation function */
 unsigned short csum(unsigned short *ptr, int nbytes) {
-    register long sum;
+    long sum = 0;
     unsigned short oddbyte;
-    register short answer;
+    short answer;
 
-    sum = 0;
     while (nbytes > 1) {
         sum += *ptr++;
         nbytes -= 2;
     }
-
     if (nbytes == 1) {
         oddbyte = 0;
-        *((u_char*)&oddbyte) = *(u_char*)ptr;
+        *((unsigned char*)&oddbyte) = *(unsigned char*)ptr;
         sum += oddbyte;
     }
 
