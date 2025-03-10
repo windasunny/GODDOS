@@ -75,7 +75,7 @@ int send_syn_packet(const char *source_ip, const char *dest_ip, int source_port,
     //Fill in the TCP Header
     create_tcp_header(tcph, source_port, dest_port);
     // Pseudo Header
-    create_pseudo_header(&psh, tcph, source_ip, dest_ip);
+    calculate_tcp_checksum(&psh, tcph, source_ip, dest_ip);
 
     //IP_HDRINCL to tell the kernel that headers are included in the packet
     int one = 1;
@@ -86,7 +86,7 @@ int send_syn_packet(const char *source_ip, const char *dest_ip, int source_port,
         return -1;
     }
 
-    // 發送封包
+    // Send Packet
     if (sendto(sock, datagram, ntohs(iph->tot_len), 0, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
         printf("Packet sending failed. Error: %d\n", errno);
         close(sock);
