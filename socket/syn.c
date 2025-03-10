@@ -43,6 +43,23 @@ void create_pseudo_header(struct pseudo_header *psh, struct tcphdr *tcph, const 
     tcph->check = csum((unsigned short*) psh, sizeof(struct pseudo_header));
 }
 
+void calculate_tcp_checksum(struct tcphdr *tcph, const char *source_ip, const char *dest_ip) {
+    int psize = sizeof(struct pseudo_header) + sizeof(struct tcphdr);
+    char *pseudogram = malloc(psize);
+    struct pseudo_header *psh = (struct pseudo_header *)pseudogram;
+
+    psh->source_address = inet_addr(source_ip);
+    psh->dest_address = inet_addr(dest_ip);
+    psh->placeholder = 0;
+    psh->protocol = IPPROTO_TCP;
+    psh->tcp_length = htons(sizeof(struct tcphdr));
+
+    memcpy(pseudogram + sizeof(struct pseudo_header), tcph, sizeof(struct tcphdr));
+
+    tcph->check = csum((unsigned short *)pseudogram, psize);
+    free(pseudogram);
+}
+
 int send_syn_packet(const char *source_ip, const char *dest_ip, int source_port, int dest_port) {
 
     //Create a raw socket
@@ -75,7 +92,7 @@ int send_syn_packet(const char *source_ip, const char *dest_ip, int source_port,
     //Fill in the TCP Header
     create_tcp_header(tcph, source_port, dest_port);
     // Pseudo Header
-    calculate_tcp_checksum(&psh, tcph, source_ip, dest_ip);
+    calculate_tcp_checksum(tcph, source_ip, dest_ip);
 
     //IP_HDRINCL to tell the kernel that headers are included in the packet
     int one = 1;
