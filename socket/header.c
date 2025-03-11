@@ -1,7 +1,5 @@
 #include "header.h"
 
-#define MAX_PACKET_ID 65535
-
 /* Generic checksum calculation function */
 unsigned short csum(unsigned short *ptr, int nbytes) {
     long sum = 0;
@@ -23,9 +21,5 @@ unsigned short csum(unsigned short *ptr, int nbytes) {
     answer = (short)~sum;
 
     return answer;
-}
-
-unsigned short generate_random_packet_id() {
-    return random() % MAX_PACKET_ID;
 }
 

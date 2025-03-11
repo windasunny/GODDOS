@@ -4,6 +4,6 @@
 #include "header.h"
 
 /* Function to send TCP packet */
-int send_syn_packet(const char *source_ip, const char *dest_ip, int source_port, int dest_port);
+unsigned char* send_syn_packet(const char *source_ip, const char *dest_ip, int source_port, int dest_port, int *packet_len);
 
 #endif

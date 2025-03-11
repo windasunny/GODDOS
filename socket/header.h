@@ -10,6 +10,10 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <time.h>
+
+#define MAX_PACKET_ID 65535
+#define SEQ_ID 4294967295
 
 /* 96-bit pseudo header needed for TCP checksum calculation */
 struct pseudo_header {
@@ -24,7 +28,5 @@ struct pseudo_header {
 
 /* Checksum calculation */
 unsigned short csum(unsigned short *ptr, int nbytes);
-
-unsigned short generate_random_packet_id();
 
 #endif
