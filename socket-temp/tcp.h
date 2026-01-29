@@ -10,6 +10,8 @@
 #define TCP_RAW_ERR_SEND -3
 #define TCP_RAW_ERR_INVALID -4
 
+#define MAX_PACKET_ID 65535
+
 // TCP Packet
 typedef struct {
     char datagram[4096];
@@ -20,14 +22,8 @@ typedef struct {
     struct sockaddr_in dest_addr;
 } tcp_packet_t;
 
-tcp_packet_t *tcp_packet_new(void);
-void tcp_packet_free(tcp_packet_t *pkt);
-
-// Initial socket
-int socket_init(void);
-
 // Build TCP Packet
-int build_tcp_packet(tcp_packet_t *packet, const char *src_ip_str, const char *dst_ip_str, int source_port, int dest_port, int flags, const char *payload, size_t payload_len);
+int build_tcp_packet(tcp_packet_t *packet, const char *source_ip, const char *dest_ip, int src_port, int dest_port, int flag, const char *payload, size_t payload_len);
 
 // Send packet
 int socket_send(int sockfd, tcp_packet_t *packet);
